@@ -1,0 +1,497 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fortepianissimo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,500;0,6..96,700;1,6..96,700;1,6..96,900&family=Libre+Franklin:wght@400;500;600&display=swap">
+<style>
+/* Layout: a lacquered piano lid as the table — opponents across the top, the pool on the music desk, your hand at the keyboard edge. Deliberately single-theme (dark lacquer). */
+:root{
+  --lacquer:#0f0d0e;
+  --lacquer-2:#1b1719;
+  --lacquer-3:#2a2427;
+  --ivory:#f3ecdc;
+  --ivory-2:#e4dac4;
+  --ink:#1d1a17;
+  --brass:#c9a24b;
+  --brass-dim:#8a6f33;
+  --text:#ece4d4;
+  --muted:#a59a8a;
+  --good:#7fbf8e;
+  --bad:#e07a6a;
+  --s0:#9b2f2f; /* Treble */
+  --s1:#2e6a4e; /* Bass */
+  --s2:#9a6a12; /* Sharp */
+  --s3:#2a4a8c; /* Flat */
+  --s4:#5d3a7c; /* Eighth */
+  --display:"Bodoni Moda","Didot","Bodoni 72",Georgia,serif;
+  --body:"Libre Franklin","Helvetica Neue",Arial,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0}
+[hidden]{display:none!important}
+body{background:var(--lacquer);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.5;
+  background-image:radial-gradient(120% 70% at 50% -10%,var(--lacquer-3),transparent 60%),linear-gradient(180deg,var(--lacquer),var(--lacquer-2));
+  background-attachment:fixed}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px;display:grid;gap:18px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--lacquer-3);padding-bottom:10px}
+h1{font-family:var(--display);font-weight:700;font-style:italic;font-size:clamp(28px,5vw,44px);margin:0;letter-spacing:-.01em;line-height:1}
+h1 .f{color:var(--brass)}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--muted);font-size:13px}
+select,button{font:inherit}
+select{background:var(--lacquer-2);color:var(--text);border:1px solid var(--lacquer-3);border-radius:6px;padding:6px 8px}
+.btn{background:transparent;color:var(--text);border:1px solid var(--brass-dim);border-radius:999px;padding:8px 16px;cursor:pointer;font-weight:500;letter-spacing:.02em;transition:background .15s,border-color .15s,color .15s}
+.btn:hover:not(:disabled){border-color:var(--brass);background:rgba(201,162,75,.08)}
+.btn.primary{background:var(--brass);color:var(--ink);border-color:var(--brass)}
+.btn.primary:hover:not(:disabled){background:#d8b45d}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn:focus-visible,.card:focus-visible,.tokbtn:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+
+.game{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+@media (max-width:880px){.game{grid-template-columns:minmax(0,1fr)}}
+.table{display:grid;gap:22px;min-width:0}
+
+/* opponents */
+.opps{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.opp{background:var(--lacquer-2);border:1px solid var(--lacquer-3);border-radius:10px;padding:10px 12px;display:grid;gap:8px;min-width:150px;transition:border-color .2s,box-shadow .2s}
+.opp.turn{border-color:var(--brass);box-shadow:0 0 0 1px var(--brass),0 0 24px rgba(201,162,75,.18)}
+.opp.out{opacity:.4}
+.opp-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.name{font-weight:600;font-size:14px}
+.lives{display:flex;gap:3px}
+.life{width:9px;height:9px;border-radius:50%;background:var(--brass)}
+.life.gone{background:transparent;border:1px solid var(--lacquer-3)}
+.mini-row{display:flex;gap:4px;align-items:center}
+.slot{margin-left:auto}
+
+/* cards */
+.card{--w:76px;width:var(--w);height:calc(var(--w)*1.42);border-radius:8px;background:linear-gradient(170deg,var(--ivory),var(--ivory-2));color:var(--c,var(--ink));position:relative;flex:none;
+  box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 6px 14px rgba(0,0,0,.45);display:grid;place-items:center;border:none;padding:0;cursor:default;transition:transform .15s,box-shadow .15s}
+/* Corner index: rank with its suit symbol beside it. The card's center is left open for now. */
+.card .idx{position:absolute;top:6px;left:6px;display:flex;align-items:center;gap:1px;font-family:var(--display);font-weight:700;font-size:calc(var(--w)*.28);line-height:1}
+.card .idx.b{top:auto;left:auto;bottom:6px;right:6px;transform:rotate(180deg)}
+/* Suit symbols: drawn from Noto Music outlines, sized by ink height so they read alike. The treble clef is slender, so it gets a little extra height. */
+.sym{display:block;overflow:visible}
+.card .sym{--k:.4;width:calc(1.75em*var(--k));height:calc(1.75em*var(--k));flex:none}
+.card .sym0{--k:.62} .card .sym1{--k:.37} .card .sym2{--k:.52} .card .sym3{--k:.5} .card .sym4{--k:.4}
+.card.pick{cursor:pointer}
+.card.pick:hover{transform:translateY(-4px)}
+.card.sel{transform:translateY(-10px);box-shadow:0 0 0 3px var(--brass),0 12px 22px rgba(0,0,0,.55)}
+.card.sm{--w:30px;border-radius:4px;box-shadow:0 2px 5px rgba(0,0,0,.5)}
+.card.sm .idx{font-size:12px;top:3px;left:3px;gap:0}
+.card.sm .idx.b{display:none}
+.back{background:repeating-linear-gradient(135deg,#3a2a1a 0 4px,#2b1f14 4px 8px);box-shadow:0 0 0 1px var(--brass-dim) inset,0 2px 5px rgba(0,0,0,.5)}
+.back.sm{--w:30px}
+.card.dim{filter:saturate(.6) brightness(.9)}
+
+/* pool */
+.pool{display:grid;justify-items:center;gap:10px;padding:18px 12px;border-radius:14px;
+  background:linear-gradient(180deg,rgba(201,162,75,.06),rgba(201,162,75,.02));border:1px solid rgba(201,162,75,.18)}
+.label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.cards{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.trump{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.status{font-family:var(--display);font-style:italic;font-size:19px;text-align:center;min-height:1.6em;text-wrap:balance;color:var(--text)}
+.status b{color:var(--brass);font-weight:700}
+
+/* you */
+.you{background:var(--lacquer-2);border:1px solid var(--lacquer-3);border-radius:14px;padding:14px;display:grid;gap:12px}
+.you.turn{border-color:var(--brass)}
+.you-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.val{font-size:13px;color:var(--muted)}
+.val strong{font-family:var(--display);font-size:19px;color:var(--text);margin-left:4px;font-variant-numeric:tabular-nums}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+
+/* tokens */
+.tok{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-style:italic;font-weight:900;font-size:17px;flex:none;
+  background:radial-gradient(circle at 35% 30%,#e8cd86,var(--brass) 55%,var(--brass-dim));color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.tok.hidden{background:radial-gradient(circle at 35% 30%,#4a3d2a,#2a2118);color:var(--brass-dim);border:1px solid var(--brass-dim)}
+.tok.big{width:76px;height:76px;font-size:34px}
+.tok.ok{box-shadow:0 0 0 3px var(--good)}
+.tok.no{box-shadow:0 0 0 3px var(--bad)}
+
+/* side */
+aside{display:grid;gap:14px;min-width:0}
+.panel{background:var(--lacquer-2);border:1px solid var(--lacquer-3);border-radius:10px;padding:12px 14px}
+.log{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:5px;max-height:260px;overflow:auto;font-size:13px;color:var(--muted)}
+.log li b{color:var(--text);font-weight:600}
+.log li.hl{color:var(--brass)}
+details summary{cursor:pointer;font-weight:600;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:" +";color:var(--brass)}
+details[open] summary::after{content:" –"}
+.rules{font-size:13.5px;color:var(--text);margin:10px 0 0;padding-left:18px;display:grid;gap:6px}
+.rules em{font-family:var(--display);font-weight:700;color:var(--brass)}
+.ranks{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:3px;font-size:13px}
+.ranks li{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px solid var(--lacquer-3)}
+.ranks li span:last-child{color:var(--muted);font-variant-numeric:tabular-nums}
+.suitkey{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+.suitkey div{display:grid;justify-items:center;font-size:10.5px;color:var(--muted);gap:2px}
+.suitkey > div > span{width:30px;height:30px;display:grid;place-items:center;background:var(--ivory);border-radius:5px}
+.suitkey .sym{--k:.4;width:calc(45px*var(--k));height:calc(45px*var(--k))}
+.suitkey .sym0{--k:.6} .suitkey .sym1{--k:.37} .suitkey .sym2{--k:.5} .suitkey .sym3{--k:.48}
+
+/* overlay */
+.overlay{position:fixed;inset:0;background:rgba(8,6,7,.78);display:grid;place-items:center;z-index:20;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));backdrop-filter:blur(3px)}
+.modal{background:var(--lacquer-2);border:1px solid var(--brass-dim);border-radius:14px;padding:20px;max-width:640px;width:100%;max-height:100%;overflow:auto;display:grid;gap:14px}
+.modal h2{font-family:var(--display);font-style:italic;font-weight:700;font-size:26px;margin:0;text-wrap:balance}
+.modal p{margin:0;color:var(--muted)}
+.tokchoice{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tokbtn{background:var(--lacquer);border:1px solid var(--lacquer-3);border-radius:12px;padding:16px 10px;display:grid;justify-items:center;gap:8px;cursor:pointer;color:var(--text);font:inherit;transition:border-color .15s}
+.tokbtn:hover{border-color:var(--brass)}
+.tokbtn span{font-size:13px;color:var(--muted);text-align:center}
+.tokbtn strong{font-size:15px}
+.res{display:grid;gap:8px}
+.resrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;background:var(--lacquer)}
+.resrow .who{display:grid;gap:5px;min-width:0}
+.resrow .mini-row{flex-wrap:wrap}
+.resrow .v{font-family:var(--display);font-size:16px;font-weight:700;text-align:right;max-width:11em;text-wrap:balance}
+.verdict{font-size:12.5px}
+.verdict.ok{color:var(--good)} .verdict.no{color:var(--bad)}
+.summary{font-size:13.5px;color:var(--muted);text-align:center}
+.summary b{color:var(--text)}
+
+@media (max-width:520px){
+  .card{--w:60px}
+  .opp{min-width:0;flex:1 1 140px}
+  .status{font-size:17px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><span class="f">f</span>ortepiani<span class="f">ss</span>imo</h1>
+    <div class="controls">
+      <label for="oppCount">Opponents</label>
+      <select id="oppCount"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+      <button class="btn" id="newGame">New game</button>
+    </div>
+  </header>
+
+  <div class="game">
+    <div class="table">
+      <div class="opps" id="opps"></div>
+      <div class="pool">
+        <div class="label">The pool</div>
+        <div class="cards" id="pool"></div>
+        <div class="trump" id="trump"></div>
+        <div class="status" id="status"></div>
+      </div>
+      <div class="you" id="you">
+        <div class="you-top">
+          <div style="display:flex;gap:10px;align-items:center"><span class="name">You</span><span class="lives" id="myLives"></span></div>
+          <div class="val" id="myVal"></div>
+          <div id="mySlot"></div>
+        </div>
+        <div class="cards" id="hand"></div>
+        <div class="actions">
+          <button class="btn primary" id="swapBtn">Swap</button>
+          <button class="btn" id="passBtn">Pass</button>
+          <button class="btn" id="callBtn"><span style="font-family:var(--display);font-style:italic;font-weight:900">f</span>&nbsp; Call “Forte!”</button>
+        </div>
+      </div>
+    </div>
+
+    <aside>
+      <div class="panel">
+        <details open id="rulesBox">
+          <summary>How to play</summary>
+          <ol class="rules">
+            <li>50 cards: 1–10 in five suits. Everyone starts with <b>4 lives</b> and two tokens, <em>M</em> Major and <em>m</em> Minor.</li>
+            <li>Each player gets 4 cards. Four more go face up in the pool. A fifth is turned face up as the <b>bests</b> card; its suit is bests for the round. The card stays out of play.</li>
+            <li>Your four cards make a <b>poker hand</b>. Rankings are below. 1 is low and straights don't wrap.</li>
+            <li>On your turn, swap one of your cards for a pool card, or pass.</li>
+            <li>Once everyone has had a turn, you may instead <b>call “Forte!”</b> and place one token face down. Your hand is locked.</li>
+            <li>Every other player takes one last turn, then places a token face down.</li>
+            <li>Reveal. <em>M</em> Major means you claim the best hand; <em>m</em> Minor means you claim the worst. Wrong claim: lose a life.</li>
+            <li>Equal hands? The higher bests card wins. If they're still tied, every tied claim counts as correct, so no one loses a life over a tie.</li>
+            <li>At 0 lives you're out. Last player standing wins. If everyone left goes out on the same reveal, the game is a draw.</li>
+          </ol>
+          <div class="label" style="margin-top:14px">Hand rankings, best first</div>
+          <ol class="ranks">
+            <li><span>Straight flush</span><span>7-8-9-10, one suit</span></li>
+            <li><span>Four of a kind</span><span>6-6-6-6</span></li>
+            <li><span>Flush</span><span>four of one suit</span></li>
+            <li><span>Straight</span><span>3-4-5-6</span></li>
+            <li><span>Three of a kind</span><span>9-9-9-2</span></li>
+            <li><span>Two pair</span><span>8-8-3-3</span></li>
+            <li><span>Pair</span><span>5-5-10-2</span></li>
+            <li><span>High card</span><span>10-7-4-1</span></li>
+          </ol>
+          <div class="suitkey" id="suitkey"></div>
+        </details>
+      </div>
+      <div class="panel">
+        <div class="label">Program notes</div>
+        <ul class="log" id="log"></ul>
+      </div>
+    </aside>
+  </div>
+</div>
+<div class="overlay" id="overlay" hidden><div class="modal" id="modal"></div></div>
+
+<script>
+const SUITS=[
+  {n:'Treble',c:'var(--s0)',vb:'50 -1334 611 1732',d:'M314 801Q300 854 291 906Q282 958 282 1012Q282 1059 288 1100Q295 1142 307 1177Q320 1217 341 1252Q362 1288 386 1311Q409 1334 427 1334Q451 1334 493 1249Q514 1206 524 1156Q534 1106 534 1049Q534 978 515 908Q496 837 460 775Q423 713 372 666L407 498Q422 500 432 501Q442 502 447 502Q508 502 556 468Q604 433 632 377Q661 321 661 254Q661 177 622 116Q582 54 503 25Q508 8 532 -117Q538 -147 541 -164Q544 -182 545 -195Q546 -208 546 -225Q546 -275 522 -314Q497 -354 456 -376Q414 -398 363 -398Q311 -398 271 -378Q231 -359 208 -324Q185 -290 185 -245Q185 -197 212 -165Q238 -133 287 -133Q329 -133 356 -164Q382 -194 382 -236Q382 -272 357 -299Q332 -326 292 -326H282Q308 -365 364 -365Q433 -365 472 -320Q511 -275 511 -205Q511 -188 507 -160Q503 -131 493 -91Q483 -51 478 -25Q472 1 470 12Q436 2 390 2Q304 2 222 52Q142 102 96 184Q50 266 50 361Q50 451 91 530Q132 609 192 675Q253 741 314 801ZM341 826Q364 838 390 870Q416 903 440 945Q464 987 479 1030Q494 1072 494 1106Q494 1142 483 1163Q472 1184 445 1184Q421 1184 398 1162Q376 1140 358 1104Q341 1067 331 1022Q321 977 321 930Q321 898 328 872Q334 846 341 826ZM398 379Q371 373 347 354Q323 334 308 306Q294 279 294 248Q294 223 307 196Q320 170 339 154Q352 142 365 136Q380 129 380 123Q380 120 370 117Q332 126 302 151Q271 176 254 212Q236 247 236 287Q236 330 254 370Q271 410 302 442Q334 474 374 490L345 641Q229 547 174 456Q120 366 120 277Q120 212 154 156Q188 100 247 66Q306 31 380 31Q400 31 420 35Q441 39 464 45ZM495 55Q593 97 593 227Q593 270 571 306Q549 341 512 362Q475 383 429 383Z'},
+  {n:'Bass',c:'var(--s1)',vb:'50 -900 692 799',d:'M50 123Q216 231 288 301Q336 348 373 408Q410 469 432 536Q453 603 453 669Q453 728 435 774Q417 819 383 845Q349 871 302 871Q284 871 264 867Q245 863 224 855Q181 839 158 814Q135 788 135 765Q135 756 143 752Q151 748 158 748Q168 748 183 752Q190 754 196 755Q203 756 210 756Q248 756 272 734Q296 711 296 674Q296 638 266 612Q236 586 195 586Q146 586 111 617Q76 648 76 697Q76 756 109 802Q142 848 198 874Q255 900 324 900Q400 900 460 867Q520 834 556 776Q591 719 591 646Q591 551 538 464Q511 419 476 379Q442 339 389 298Q336 256 256 208Q176 160 57 101ZM687 809Q710 809 726 793Q742 777 742 754Q742 731 726 716Q710 700 687 700Q664 700 648 716Q632 731 632 754Q632 777 648 793Q664 809 687 809ZM687 589Q710 589 726 573Q742 557 742 534Q742 511 726 496Q710 480 687 480Q664 480 648 496Q632 511 632 534Q632 557 648 573Q664 589 687 589Z'},
+  {n:'Sharp',c:'var(--s2)',vb:'50 -509 225 756',d:'M97 46V189L50 177V277L97 290V486H128V298L195 314V509H226V322L275 333V234L226 220V77L275 89V-14L226 -26V-214H195V-34L128 -52V-247H97V-59L50 -71V32ZM195 70V214L128 197V54Z'},
+  {n:'Flat',c:'var(--s3)',vb:'50 -615 199 670',d:'M50 615H81V225Q118 262 165 262Q197 262 223 240Q249 219 249 178Q249 146 230 119Q211 92 179 65L110 6Q91 -10 76 -26Q61 -41 50 -55ZM81 12Q107 40 125 64Q143 87 153 105Q164 124 170 140Q175 156 175 170Q175 198 162 210Q149 223 134 223Q118 223 102 212Q87 200 81 180Z'},
+  {n:'Eighth',c:'var(--s4)',vb:'51 -563 308 549',d:'M194 563H231V514L305 420Q333 386 346 346Q359 306 359 265Q359 191 313 133H290Q318 193 318 254Q318 293 305 324Q292 354 272 373Q252 392 231 395V148Q231 88 196 51Q160 14 107 14Q79 14 65 28Q51 41 51 63Q51 89 65 110Q79 131 102 144Q125 157 150 157Q172 157 194 148Z'}
+];
+const ALL=[];for(let s=0;s<5;s++)for(let r=1;r<=10;r++)ALL.push({s,r,id:s*10+r-1});
+const CARD=id=>ALL[id];
+const NAMES=['Clara','Franz','Fanny','Amy','Ludwig'];
+const AI_DELAY=900;
+const $=id=>document.getElementById(id);
+const svgOf=s=>`<svg class="sym sym${s}" viewBox="${SUITS[s].vb}" preserveAspectRatio="xMinYMid meet" aria-hidden="true"><path transform="scale(1,-1)" fill="currentColor" d="${SUITS[s].d}"/></svg>`;
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+
+/* 4-card poker hands, ranked by rarity in this 50-card deck. 1 is low; no wraparound. */
+const CATS=['High card','Pair','Two pair','Three of a kind','Straight','Flush','Four of a kind','Straight flush'];
+function analyze(h){
+  const cs=h.map(CARD);const rs=cs.map(c=>c.r).sort((a,b)=>a-b);
+  const fl=cs.every(c=>c.s===cs[0].s);
+  const cnt={};rs.forEach(r=>cnt[r]=(cnt[r]||0)+1);
+  const g=Object.entries(cnt).map(([r,n])=>[+r,n]).sort((a,b)=>b[1]-a[1]||b[0]-a[0]);
+  const st=g.length===4&&rs[3]-rs[0]===3;const top=g[0][1];
+  let cat;
+  if(st&&fl)cat=7;else if(top===4)cat=6;else if(fl)cat=5;else if(st)cat=4;else if(top===3)cat=3;else if(top===2&&g.length===2)cat=2;else if(top===2)cat=1;else cat=0;
+  let tb=0;if(st)tb=rs[3];else g.forEach(([r,n])=>{for(let i=0;i<n;i++)tb=tb*11+r});
+  return{cat,score:cat*1e5+tb,g,hi:rs[3]};
+}
+/* Trump breaks exact ties: compare trump cards high to low. */
+function trumpKey(h){const t=h.map(CARD).filter(c=>S&&c.s===S.trump).map(c=>c.r).sort((a,b)=>b-a);let k=0;for(let i=0;i<4;i++)k=k*11+(t[i]||0);return k}
+const value=h=>analyze(h).score*15000+trumpKey(h);
+function handName(h){const a=analyze(h),g=a.g;
+  switch(a.cat){
+    case 7:return `Straight flush, ${a.hi} high`;
+    case 6:return `Four ${g[0][0]}s`;
+    case 5:return `Flush, ${g[0][0]} high`;
+    case 4:return `Straight, ${a.hi} high`;
+    case 3:return `Three ${g[0][0]}s`;
+    case 2:return `Two pair, ${g[0][0]}s and ${g[1][0]}s`;
+    case 1:return `Pair of ${g[0][0]}s`;
+    default:return `High card ${g[0][0]}`;
+  }}
+const cname=id=>{const c=CARD(id);return `${c.r} of ${SUITS[c.s].n}`};
+
+let S=null, sel={h:null,p:null}, timer=null;
+
+function newGame(nOpp){
+  clearTimeout(timer);
+  const players=[{name:'You',human:true}];
+  for(let i=0;i<nOpp;i++)players.push({name:NAMES[i],human:false});
+  players.forEach(p=>{p.lives=4;p.out=false;p.hand=[];p.known=[];p.token=null});
+  S={players,pool:[],dealer:Math.random()*players.length|0,turn:0,phase:'play',caller:null,queue:[],turnsTaken:0,round:0,log:[],winner:null,awaitTokenFor:null,reveal:null};
+  startRound();
+}
+const active=()=>S.players.map((p,i)=>i).filter(i=>!S.players[i].out);
+function nextActive(i){const n=S.players.length;for(let k=1;k<=n;k++){const j=(i+k)%n;if(!S.players[j].out)return j}return i}
+function log(html,hl){S.log.unshift({html,hl});if(S.log.length>60)S.log.pop()}
+
+function startRound(){
+  S.round++;S.dealer=nextActive(S.dealer);
+  const deck=shuffle(ALL.map(c=>c.id));
+  S.players.forEach(p=>{p.hand=[];p.known=[];p.token=null});
+  active().forEach(i=>{S.players[i].hand=deck.splice(0,4)});
+  S.pool=deck.splice(0,4);S.trumpCard=deck.shift();S.trump=CARD(S.trumpCard).s;
+  S.phase='play';S.caller=null;S.queue=[];S.turnsTaken=0;S.reveal=null;S.awaitTokenFor=null;
+  S.turn=nextActive(S.dealer);
+  log(`<b>Round ${S.round}.</b> ${S.players[S.dealer].name} deals. Bests is ${SUITS[S.trump].n} (${cname(S.trumpCard)}).`,true);
+  sel={h:null,p:null};render();schedule();
+}
+function canCall(){return S.phase==='play'&&S.turnsTaken>=active().length}
+
+function doSwap(pi,hi,pj){
+  const p=S.players[pi];const out=p.hand[hi],inn=S.pool[pj];
+  p.hand[hi]=inn;S.pool[pj]=out;
+  p.known=p.known.filter(id=>id!==out);p.known.push(inn);
+  log(`<b>${p.name}</b> took ${cname(inn)}, left ${cname(out)}.`);
+  endTurn(pi);
+}
+function doPass(pi){log(`<b>${S.players[pi].name}</b> passes.`);endTurn(pi)}
+function doCall(pi,tok){
+  const p=S.players[pi];p.token=tok;S.caller=pi;S.phase='final';
+  log(`<b>${p.name}</b> calls “Forte!” and places a token face down.`,true);
+  S.queue=[];let j=nextActive(pi);while(j!==pi){S.queue.push(j);j=nextActive(j)}
+  advanceFinal();
+}
+function endTurn(pi){
+  S.turnsTaken++;
+  if(S.phase==='final'){
+    const p=S.players[pi];
+    if(p.human){S.awaitTokenFor=pi;render();openTokenModal(false);return}
+    p.token=aiChooseToken(pi);log(`<b>${p.name}</b> places a token face down.`);
+    advanceFinal();
+  }else{S.turn=nextActive(pi);sel={h:null,p:null};render();schedule()}
+}
+function placeToken(pi,tok){S.players[pi].token=tok;S.awaitTokenFor=null;closeModal();
+  if(S.caller===null){doCall(pi,tok);return}
+  log(`<b>You</b> place a token face down.`);advanceFinal()}
+function advanceFinal(){
+  sel={h:null,p:null};
+  if(S.queue.length===0){reveal();return}
+  S.turn=S.queue.shift();render();schedule();
+}
+
+function reveal(){
+  const ids=active();const vals=ids.map(i=>value(S.players[i].hand));
+  const mx=Math.max(...vals),mn=Math.min(...vals);
+  const rows=ids.map((i,k)=>{const p=S.players[i];const v=vals[k];const ok=(p.token==='f'&&v===mx)||(p.token==='pp'&&v===mn);return{i,v,ok,tok:p.token,name:handName(p.hand)}});
+  const losers=rows.filter(r=>!r.ok);
+  const wouldOut=losers.filter(r=>S.players[r.i].lives===1).length;
+  const survivorsLeft=ids.length-wouldOut;
+  const spared=false;
+  losers.forEach(r=>{const p=S.players[r.i];p.lives--;if(p.lives<=0){p.out=true;r.out=true}});
+  rows.forEach(r=>log(`<b>${S.players[r.i].name}</b> ${r.tok==='f'?'Major':'Minor'} with ${r.name.toLowerCase()}: ${r.ok?'held':spared?'spared':'lost a life'}${r.out?' and is out':''}.`,r.out));
+  S.phase='reveal';S.reveal={rows,mx,mn,spared,mxName:rows.find(r=>r.v===mx).name,mnName:rows.find(r=>r.v===mn).name};
+  const left=active();if(left.length<=1){S.winner=left.length?left[0]:null;S.phase='over';if(!left.length)log('<b>Everyone is out.</b> The game is a draw.',true)}
+  render();openRevealModal();
+}
+
+/* ---------- AI ---------- */
+function estimate(pi,hand,pool,N){
+  const me=value(hand);
+  const ex=new Set([...hand,...pool]);if(S.trumpCard!=null)ex.add(S.trumpCard);
+  const others=active().filter(j=>j!==pi);
+  const fixed=others.map(j=>S.players[j].known.filter(id=>!ex.has(id)));
+  fixed.flat().forEach(id=>ex.add(id));
+  const unseen=ALL.map(c=>c.id).filter(id=>!ex.has(id));
+  const need=fixed.reduce((a,f)=>a+4-f.length,0);
+  let b=0,w=0;
+  for(let n=0;n<N;n++){
+    const u=unseen;for(let i=0;i<need;i++){const j=i+(Math.random()*(u.length-i)|0);[u[i],u[j]]=[u[j],u[i]]}
+    let k=0,mx=-1,mn=99;
+    for(const f of fixed){const h=f.slice();while(h.length<4)h.push(u[k++]);const v=value(h);if(v>mx)mx=v;if(v<mn)mn=v}
+    if(me>=mx)b++;if(me<=mn)w++;
+  }
+  return{b:b/N,w:w/N};
+}
+function aiChooseToken(pi){const e=estimate(pi,S.players[pi].hand,S.pool,400);return e.b>=e.w?'f':'pp'}
+function aiTurn(pi){
+  const p=S.players[pi];const N=60;
+  const cur=estimate(pi,p.hand,S.pool,N*2);const curScore=Math.max(cur.b,cur.w);
+  if(canCall()&&curScore>=0.62+Math.random()*0.14){doCall(pi,cur.b>=cur.w?'f':'pp');return}
+  let best={sc:curScore+0.02,i:-1,j:-1};
+  for(let i=0;i<4;i++)for(let j=0;j<S.pool.length;j++){
+    const h=p.hand.slice();h[i]=S.pool[j];const pl=S.pool.slice();pl[j]=p.hand[i];
+    const e=estimate(pi,h,pl,N);const sc=Math.max(e.b,e.w)+Math.random()*0.03;
+    if(sc>best.sc)best={sc,i,j};
+  }
+  if(best.i<0)doPass(pi);else doSwap(pi,best.i,best.j);
+}
+function schedule(){
+  clearTimeout(timer);
+  if(S.phase!=='play'&&S.phase!=='final')return;
+  const p=S.players[S.turn];
+  if(!p.human)timer=setTimeout(()=>aiTurn(S.turn),AI_DELAY);
+}
+
+/* ---------- render ---------- */
+function cardHTML(id,{sm=false,pick=false,selected=false,data=''}={}){
+  const c=CARD(id);
+  const tag=pick?'button':'div';
+  return `<${tag} class="card${sm?' sm':''}${pick?' pick':''}${selected?' sel':''}" style="--c:${SUITS[c.s].c}" ${data} ${pick?`aria-label="${cname(id)}" aria-pressed="${selected}"`:''}>
+    <span class="idx">${c.r}${svgOf(c.s)}</span>${sm?'':`<span class="idx b">${c.r}${svgOf(c.s)}</span>`}</${tag}>`;
+}
+const backHTML=()=>`<div class="card back sm" aria-label="face-down card"></div>`;
+const livesHTML=n=>Array.from({length:4},(_,i)=>`<span class="life${i<n?'':' gone'}"></span>`).join('');
+function tokHTML(t,{hidden=false,cls=''}={}){return `<span class="tok${hidden?' hidden':''} ${cls}" aria-label="${hidden?'face-down token':t==='f'?'Major token':'Minor token'}">${hidden?'?':t==='f'?'M':'m'}</span>`}
+
+function render(){
+  if(!S)return;
+  const human=S.players[0];
+  // opponents
+  $('opps').innerHTML=S.players.slice(1).map((p,k)=>{
+    const i=k+1;
+    const cards=p.out?'':[...p.known.map(id=>cardHTML(id,{sm:true})),...Array(4-p.known.length).fill(0).map(backHTML)].join('');
+    return `<div class="opp${S.turn===i&&(S.phase==='play'||S.phase==='final')?' turn':''}${p.out?' out':''}">
+      <div class="opp-top"><span class="name">${p.name}${S.dealer===i?' <span class="label" style="font-size:9px">dealer</span>':''}</span><span class="lives">${livesHTML(p.lives)}</span></div>
+      <div class="mini-row">${p.out?'<span class="label">out</span>':cards}<span class="slot">${p.token&&S.phase!=='reveal'&&S.phase!=='over'?tokHTML(p.token,{hidden:true}):''}</span></div>
+    </div>`}).join('');
+  // pool
+  const myTurn=S.turn===0&&!human.out&&(S.phase==='play'||S.phase==='final')&&S.awaitTokenFor===null;
+  $('pool').innerHTML=S.pool.map((id,j)=>cardHTML(id,{pick:myTurn,selected:sel.p===j,data:`data-p="${j}"`})).join('');
+  $('trump').innerHTML=S.trumpCard!=null?`<span class="label">Bests</span>${cardHTML(S.trumpCard,{sm:true})}<span>${SUITS[S.trump].n} breaks ties</span>`:'';
+  // hand
+  $('hand').innerHTML=human.out?'<span class="label">You are out. Watch the others finish.</span>':human.hand.map((id,i)=>cardHTML(id,{pick:myTurn,selected:sel.h===i,data:`data-h="${i}"`})).join('');
+  $('myLives').innerHTML=livesHTML(human.lives);
+  if(!human.out){$('myVal').innerHTML=`Your hand <strong>${handName(human.hand)}</strong>`}else $('myVal').innerHTML='';
+  $('mySlot').innerHTML=human.token&&S.phase!=='reveal'&&S.phase!=='over'?tokHTML(human.token):'';
+  $('you').classList.toggle('turn',myTurn);
+  $('swapBtn').disabled=!(myTurn&&sel.h!==null&&sel.p!==null);
+  $('passBtn').disabled=!myTurn;
+  $('callBtn').disabled=!(myTurn&&canCall());
+  $('callBtn').hidden=S.phase==='final';
+  // status
+  let st='';
+  if(S.phase==='over')st=S.winner===null?'Everyone went out together. <b>A draw.</b>':S.winner===0?'<b>You win.</b> Bravo.':`<b>${S.players[S.winner].name}</b> wins the game.`;
+  else if(S.phase==='reveal')st='Hands revealed.';
+  else if(myTurn){
+    if(S.phase==='final')st=`<b>${S.players[S.caller].name}</b> called. Your last turn: swap or pass, then place a token.`;
+    else st=canCall()?'Your turn. Swap a card, pass, or call <b>Forte!</b>':'Your turn. Swap a card from your hand with one from the pool, or pass.';
+  }else if(S.awaitTokenFor===0)st='Place your token.';
+  else st=`${S.players[S.turn].name} is thinking…`+(S.phase==='final'?' (last turns)':'');
+  $('status').innerHTML=st;
+  $('log').innerHTML=S.log.map(l=>`<li class="${l.hl?'hl':''}">${l.html}</li>`).join('');
+}
+
+/* ---------- modals ---------- */
+function openTokenModal(isCall){
+  const v=handName(S.players[0].hand);
+  $('modal').innerHTML=`<h2>${isCall?'Call “Forte!”':'Place your token'}</h2>
+    <p>Your hand: <b style="color:var(--text)">${v}</b>. Pick a claim. It stays face down until the reveal.</p>
+    <div class="tokchoice">
+      <button class="tokbtn" id="tokF">${tokHTML('f',{cls:'big'})}<strong>Major</strong><span>My hand is the best</span></button>
+      <button class="tokbtn" id="tokP">${tokHTML('pp',{cls:'big'})}<strong>Minor</strong><span>My hand is the worst</span></button>
+    </div>
+    ${isCall?'<div class="actions"><button class="btn" id="tokCancel">Cancel</button></div>':''}`;
+  $('overlay').hidden=false;
+  $('tokF').onclick=()=>placeToken(0,'f');
+  $('tokP').onclick=()=>placeToken(0,'pp');
+  if(isCall)$('tokCancel').onclick=()=>{S.awaitTokenFor=null;closeModal();render()};
+  $('tokF').focus();
+}
+function openRevealModal(){
+  const R=S.reveal;
+  const rows=R.rows.slice().sort((a,b)=>b.v-a.v).map(r=>{const p=S.players[r.i];
+    return `<div class="resrow"><div class="who"><span class="name">${p.name}${S.caller===r.i?' <span class="label" style="font-size:9px">caller</span>':''}</span>
+      <div class="mini-row">${p.hand.map(id=>cardHTML(id,{sm:true})).join('')}</div>
+      <span class="verdict ${r.ok?'ok':'no'}">${r.ok?'Claim held':R.spared?'Wrong claim, spared':r.out?'Wrong claim: out of the game':`Wrong claim: ${p.lives} ${p.lives===1?'life':'lives'} left`}</span></div>
+      <span class="v">${r.name}</span>${tokHTML(r.tok,{cls:r.ok?'ok':'no'})}</div>`}).join('');
+  const over=S.phase==='over';
+  $('modal').innerHTML=`<h2>${over?(S.winner===null?'Everyone is out: the game is a draw':S.winner===0?'You win the game':`${S.players[S.winner].name} wins the game`):`Round ${S.round}: the reveal`}</h2>
+    <div class="summary">Best: <b>${R.mxName}</b> · Worst: <b>${R.mnName}</b> · Bests: <b>${S.trump!=null?SUITS[S.trump].n:'none'}</b>${R.spared?' · Everyone left would have gone out, so no one loses a life.':''}</div>
+    <div class="res">${rows}</div>
+    <div class="actions"><button class="btn primary" id="nextBtn">${over?'Play again':'Next round'}</button></div>`;
+  $('overlay').hidden=false;
+  $('nextBtn').onclick=()=>{closeModal();over?newGame(+$('oppCount').value):startRound()};
+  $('nextBtn').focus();
+}
+function closeModal(){$('overlay').hidden=true}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const h=e.target.closest('[data-h]'),p=e.target.closest('[data-p]');
+  if(h){const i=+h.dataset.h;sel.h=sel.h===i?null:i;render()}
+  if(p){const j=+p.dataset.p;sel.p=sel.p===j?null:j;render()}
+});
+$('swapBtn').onclick=()=>{if(sel.h!==null&&sel.p!==null)doSwap(0,sel.h,sel.p)};
+$('passBtn').onclick=()=>doPass(0);
+$('callBtn').onclick=()=>{S.awaitTokenFor=0;openTokenModal(true)};
+$('newGame').onclick=()=>{closeModal();newGame(+$('oppCount').value)};
+$('suitkey').innerHTML=SUITS.map((s,i)=>`<div><span style="color:${s.c}">${svgOf(i)}</span>${s.n}</div>`).join('');
+
+/* ---------- boot / live update ---------- */
+window.claude?.hot?.snapshot?.(()=>({S,opp:$('oppCount').value}));
+function start(data){
+  if(data&&data.S){S=data.S;$('oppCount').value=data.opp||'3';render();
+    if(S.awaitTokenFor===0)openTokenModal(S.caller===null);
+    else if(S.phase==='reveal'||S.phase==='over')openRevealModal();
+    else schedule();
+  }else newGame(3);
+}
+window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data??{});
+</script>
