@@ -7,7 +7,7 @@ A card game of swapping, bluffing and betting on the best or worst hand. Loosely
 ## The short version
 
 - 50 cards, valued 1–10 in five suits: Treble 𝄞, Bass 𝄢, Sharp ♯, Flat ♭, Eighth ♪.
-- Everyone gets 4 cards and 4 lives. Four cards go face up in the pool, and one more is turned up as **bests**, the tie-breaking suit.
+- Everyone gets 4 cards and 4 lives. Four cards go face up in the pool, and one more is turned up as **bests**. Between two hands of the same kind, the higher bests card wins before values are compared.
 - On your turn, swap a card with the pool or pass. Once everyone has had a turn, you can call **"Forte!"** instead.
 - After a call, everyone else takes one last turn. Then each player secretly bets **Major** (best hand) or **Minor** (worst hand).
 - Hands are 4-card poker hands. Guess wrong and you lose a life. Last player standing wins.

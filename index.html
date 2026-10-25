@@ -208,7 +208,8 @@ details[open] summary::after{content:" –"}
             <li>Once everyone has had a turn, you may instead <b>call “Forte!”</b> and place one token face down. Your hand is locked.</li>
             <li>Every other player takes one last turn, then places a token face down.</li>
             <li>Reveal. <em>M</em> Major means you claim the best hand; <em>m</em> Minor means you claim the worst. Wrong claim: lose a life.</li>
-            <li>Equal hands? The higher bests card wins. If they're still tied, every tied claim counts as correct, so no one loses a life over a tie.</li>
+            <li>Same kind of hand? <b>Bests comes first</b>: the hand holding the highest bests card wins, before values are compared. A pair of 5s with a bests card beats a pair of 8s without one. Bests never beats a better kind of hand.</li>
+            <li>No bests card on either side? Higher values win. Still tied: every tied claim counts as correct.</li>
             <li>At 0 lives you're out. Last player standing wins. If everyone left goes out on the same reveal, the game is a draw.</li>
           </ol>
           <div class="label" style="margin-top:14px">Hand rankings, best first</div>
@@ -274,9 +275,9 @@ function analyze(h){
   let tb=0;if(st)tb=rs[3];else g.forEach(([r,n])=>{for(let i=0;i<n;i++)tb=tb*11+r});
   return{cat,score:cat*1e5+tb,g,hi:rs[3]};
 }
-/* Trump breaks exact ties: compare trump cards high to low. */
+/* Bests before values: within the same kind of hand, compare bests cards (highest first), then values. */
 function trumpKey(h){const t=h.map(CARD).filter(c=>S&&c.s===S.trump).map(c=>c.r).sort((a,b)=>b-a);let k=0;for(let i=0;i<4;i++)k=k*11+(t[i]||0);return k}
-const value=h=>analyze(h).score*15000+trumpKey(h);
+const value=h=>{const a=analyze(h);return (a.cat*15000+trumpKey(h))*1e5+(a.score-a.cat*1e5);};
 function handName(h){const a=analyze(h),g=a.g;
   switch(a.cat){
     case 7:return `Straight flush, ${a.hi} high`;
@@ -441,7 +442,7 @@ function render(){
   // pool
   const myTurn=S.turn===0&&!human.out&&(S.phase==='play'||S.phase==='final')&&S.awaitTokenFor===null;
   $('pool').innerHTML=S.pool.map((id,j)=>cardHTML(id,{pick:myTurn,selected:sel.p===j,data:`data-p="${j}"`})).join('');
-  $('trump').innerHTML=S.trumpCard!=null?`<span class="label">Bests</span>${cardHTML(S.trumpCard,{sm:true})}<span>${SUITS[S.trump].n} breaks ties</span>`:'';
+  $('trump').innerHTML=S.trumpCard!=null?`<span class="label">Bests</span>${cardHTML(S.trumpCard,{sm:true})}<span>${SUITS[S.trump].n} wins within each kind of hand</span>`:'';
   // hand
   $('hand').innerHTML=human.out?'<span class="label">You are out. Watch the others finish.</span>':human.hand.map((id,i)=>cardHTML(id,{pick:myTurn,selected:sel.h===i,data:`data-h="${i}"`})).join('');
   $('myLives').innerHTML=livesHTML(human.lives);
