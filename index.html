@@ -64,6 +64,8 @@ select{background:var(--lacquer-2);color:var(--text);border:1px solid var(--lacq
 .life{width:9px;height:9px;border-radius:50%;background:var(--brass)}
 .life.gone{background:transparent;border:1px solid var(--lacquer-3)}
 .mini-row{display:flex;gap:4px;align-items:center}
+.style{font-family:var(--display);font-style:italic;font-weight:700;font-size:13px;color:var(--brass);margin-top:-4px;max-width:200px}
+.style span{font-family:var(--body);font-style:normal;font-weight:400;font-size:11.5px;color:var(--muted)}
 .slot{margin-left:auto}
 
 /* cards */
@@ -243,6 +245,17 @@ const SUITS=[
 const ALL=[];for(let s=0;s<5;s++)for(let r=1;r<=10;r++)ALL.push({s,r,id:s*10+r-1});
 const CARD=id=>ALL[id];
 const NAMES=['Clara','Franz','Fanny','Amy','Ludwig'];
+/* Bot playing styles. wb/ww weight the pull toward Major/Minor; call = confidence needed to call; jit = randomness in that;
+   patience = full table rotations before calling; noise/wild = sloppy or random swaps; pass = how much better a swap must be;
+   reads = tracks the cards others took from the pool; n = how hard it thinks. */
+const STYLES=[
+  {tag:'Virtuoso',desc:'Reads the table and waits for a sure thing.',wb:1,ww:1,call:.74,jit:.08,patience:1,noise:.01,wild:0,pass:.01,reads:true,n:80},
+  {tag:'Bold',desc:'Chases the best hand and calls early.',wb:1.3,ww:.75,call:.5,jit:.12,patience:1,noise:.04,wild:.03,pass:.03,reads:true,n:50},
+  {tag:'Sly',desc:'Loves sinking low for a Minor claim.',wb:.75,ww:1.3,call:.58,jit:.1,patience:1,noise:.03,wild:.02,pass:.02,reads:true,n:60},
+  {tag:'Wild',desc:'Plays on instinct. Hard to predict.',wb:1,ww:1,call:.42,jit:.4,patience:1,noise:.2,wild:.2,pass:0,reads:false,n:30},
+  {tag:'Cautious',desc:'Holds steady, passes often and calls late.',wb:1,ww:1,call:.82,jit:.06,patience:2,noise:.02,wild:0,pass:.07,reads:true,n:70}
+];
+const DEFAULT_STYLE=STYLES[0];
 const AI_DELAY=900;
 const $=id=>document.getElementById(id);
 const svgOf=s=>`<svg class="sym sym${s}" viewBox="${SUITS[s].vb}" preserveAspectRatio="xMinYMid meet" aria-hidden="true"><path transform="scale(1,-1)" fill="currentColor" d="${SUITS[s].d}"/></svg>`;
@@ -282,7 +295,8 @@ let S=null, sel={h:null,p:null}, timer=null;
 function newGame(nOpp){
   clearTimeout(timer);
   const players=[{name:'You',human:true}];
-  for(let i=0;i<nOpp;i++)players.push({name:NAMES[i],human:false});
+  const styles=shuffle(STYLES.slice());
+  for(let i=0;i<nOpp;i++)players.push({name:NAMES[i],human:false,style:styles[i]});
   players.forEach(p=>{p.lives=4;p.out=false;p.hand=[];p.known=[];p.token=null});
   S={players,pool:[],dealer:Math.random()*players.length|0,turn:0,phase:'play',caller:null,queue:[],turnsTaken:0,round:0,log:[],winner:null,awaitTokenFor:null,reveal:null};
   startRound();
@@ -352,11 +366,11 @@ function reveal(){
 }
 
 /* ---------- AI ---------- */
-function estimate(pi,hand,pool,N){
+function estimate(pi,hand,pool,N,reads=true){
   const me=value(hand);
   const ex=new Set([...hand,...pool]);if(S.trumpCard!=null)ex.add(S.trumpCard);
   const others=active().filter(j=>j!==pi);
-  const fixed=others.map(j=>S.players[j].known.filter(id=>!ex.has(id)));
+  const fixed=others.map(j=>reads?S.players[j].known.filter(id=>!ex.has(id)):[]);
   fixed.flat().forEach(id=>ex.add(id));
   const unseen=ALL.map(c=>c.id).filter(id=>!ex.has(id));
   const need=fixed.reduce((a,f)=>a+4-f.length,0);
@@ -369,15 +383,27 @@ function estimate(pi,hand,pool,N){
   }
   return{b:b/N,w:w/N};
 }
-function aiChooseToken(pi){const e=estimate(pi,S.players[pi].hand,S.pool,400);return e.b>=e.w?'f':'pp'}
+const styleOf=pi=>S.players[pi].style||DEFAULT_STYLE;
+const pull=(e,st)=>Math.max(e.b*st.wb,e.w*st.ww);
+function aiChooseToken(pi){
+  const st=styleOf(pi);const e=estimate(pi,S.players[pi].hand,S.pool,st.n*5,st.reads);
+  if(st.wild&&Math.random()<st.wild*.5)return Math.random()<.5?'f':'pp';
+  return e.b*st.wb>=e.w*st.ww?'f':'pp';
+}
 function aiTurn(pi){
-  const p=S.players[pi];const N=60;
-  const cur=estimate(pi,p.hand,S.pool,N*2);const curScore=Math.max(cur.b,cur.w);
-  if(canCall()&&curScore>=0.62+Math.random()*0.14){doCall(pi,cur.b>=cur.w?'f':'pp');return}
-  let best={sc:curScore+0.02,i:-1,j:-1};
-  for(let i=0;i<4;i++)for(let j=0;j<S.pool.length;j++){
+  const p=S.players[pi];const st=styleOf(pi);const N=st.n;
+  const cur=estimate(pi,p.hand,S.pool,N*2,st.reads);const curScore=pull(cur,st);
+  // the longer a round runs past this player's patience, the less sure it needs to be to call
+  const rot=S.turnsTaken/active().length;
+  const thr=st.call+Math.random()*st.jit-0.04*Math.max(0,rot-st.patience);
+  if(canCall()&&rot>=st.patience&&curScore>=thr){doCall(pi,aiChooseToken(pi));return}
+  const options=[];
+  for(let i=0;i<4;i++)for(let j=0;j<S.pool.length;j++)options.push([i,j]);
+  if(st.wild&&Math.random()<st.wild){const [i,j]=options[Math.random()*options.length|0];doSwap(pi,i,j);return}
+  let best={sc:curScore+st.pass,i:-1,j:-1};
+  for(const [i,j] of options){
     const h=p.hand.slice();h[i]=S.pool[j];const pl=S.pool.slice();pl[j]=p.hand[i];
-    const e=estimate(pi,h,pl,N);const sc=Math.max(e.b,e.w)+Math.random()*0.03;
+    const sc=pull(estimate(pi,h,pl,N,st.reads),st)+Math.random()*st.noise;
     if(sc>best.sc)best={sc,i,j};
   }
   if(best.i<0)doPass(pi);else doSwap(pi,best.i,best.j);
@@ -409,6 +435,7 @@ function render(){
     const cards=p.out?'':[...p.known.map(id=>cardHTML(id,{sm:true})),...Array(4-p.known.length).fill(0).map(backHTML)].join('');
     return `<div class="opp${S.turn===i&&(S.phase==='play'||S.phase==='final')?' turn':''}${p.out?' out':''}">
       <div class="opp-top"><span class="name">${p.name}${S.dealer===i?' <span class="label" style="font-size:9px">dealer</span>':''}</span><span class="lives">${livesHTML(p.lives)}</span></div>
+      ${p.style?`<div class="style" title="${p.style.desc}">${p.style.tag} <span>· ${p.style.desc}</span></div>`:''}
       <div class="mini-row">${p.out?'<span class="label">out</span>':cards}<span class="slot">${p.token&&S.phase!=='reveal'&&S.phase!=='over'?tokHTML(p.token,{hidden:true}):''}</span></div>
     </div>`}).join('');
   // pool
