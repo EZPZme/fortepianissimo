@@ -50,6 +50,6 @@ Ranked by how rare each hand is in this 50-card deck (out of 230,300 possible ha
 - Calling replaces your swap (Blitz-style knock). Alternative: swap, then call.
 - Passing is allowed: a turn is a swap, a pass, or a call.
 - No calling until everyone has had at least one turn.
-- Bests before values: within the same kind of hand, bests cards are compared before values. In 1,000 simulated games this decided the best or worst hand in about 1 in 5 reveals, against 1 in 150 when bests only broke exact ties.
+- Bests before values: within the same kind of hand, bests cards are compared before values. In 1,000 simulated bot games this changed who had the best or worst hand in about 1 in 20 reveals.
 - True ties (no bests cards, same values) count as correct for Major and Minor.
 - Straight ranks above three of a kind and two pair because it's slightly rarer with 5 suits (4,340 vs 4,500). Three of a kind and two pair are equally rare; three of a kind is ranked higher by convention.
