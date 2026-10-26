@@ -383,7 +383,7 @@ function reveal(){
   rec(`REVEAL. Best hand: ${rows.find(r=>r.v===mx).name}. Worst hand: ${rows.find(r=>r.v===mn).name}.`);
   rows.forEach(r=>{const p=S.players[r.i];rec(`  ${p.name}: ${handStr(p.hand)} = ${r.name}. Claimed ${tokName(r.tok)}: ${r.ok?'right':'wrong, loses a life'}${r.out?' and is out':` (${p.lives} ${p.lives===1?'life':'lives'} left)`}.`)});
   S.phase='reveal';S.reveal={rows,mx,mn,spared,mxName:rows.find(r=>r.v===mx).name,mnName:rows.find(r=>r.v===mn).name};
-  const left=active();if(left.length<=1){S.winner=left.length?left[0]:null;S.phase='over';if(!left.length)log('<b>Everyone is out.</b> The game is a draw.',true);rec('');rec(S.winner==null?'GAME OVER: everyone went out together. Draw.':`GAME OVER: ${S.players[S.winner].name} wins after ${S.round} rounds.`)}
+  const left=active();if(left.length<=1){S.winner=left.length?left[0]:null;S.phase='over';if(!left.length)log('<b>Everyone is out.</b> The game is a draw.',true);rec('');rec(S.winner==null?'GAME OVER: everyone went out together. Draw.':`GAME OVER: ${S.winner===0?'You win':S.players[S.winner].name+' wins'} after ${S.round} rounds.`)}
   render();openRevealModal();
 }
 
