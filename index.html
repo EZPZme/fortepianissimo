@@ -82,10 +82,6 @@ select{background:var(--lacquer-2);color:var(--text);border:1px solid var(--lacq
 .card.pick:hover{transform:translateY(-4px)}
 .card.sel{transform:translateY(-10px);box-shadow:0 0 0 3px var(--brass),0 12px 22px rgba(0,0,0,.55)}
 .card.sm{--w:30px;border-radius:4px;box-shadow:0 2px 5px rgba(0,0,0,.5)}
-/* bests cards: gold ring */
-.card.bmark{box-shadow:0 0 0 2px var(--brass),0 6px 14px rgba(0,0,0,.45)}
-.card.sm.bmark{box-shadow:0 0 0 2px var(--brass),0 2px 5px rgba(0,0,0,.5)}
-.card.bmark.sel{box-shadow:0 0 0 3px #f0d68a,0 12px 22px rgba(0,0,0,.55)}
 .card.sm .idx{font-size:12px;top:3px;left:3px;gap:0}
 .card.sm .idx.b{display:none}
 .back{background:repeating-linear-gradient(135deg,#3a2a1a 0 4px,#2b1f14 4px 8px);box-shadow:0 0 0 1px var(--brass-dim) inset,0 2px 5px rgba(0,0,0,.5)}
@@ -183,7 +179,6 @@ details[open] summary::after{content:" –"}
       <div class="pool">
         <div class="label">The pool</div>
         <div class="cards" id="pool"></div>
-        <div class="trump" id="trump"></div>
         <div class="status" id="status"></div>
       </div>
       <div class="you" id="you">
@@ -207,14 +202,13 @@ details[open] summary::after{content:" –"}
           <summary>How to play</summary>
           <ol class="rules">
             <li>50 cards: 1–10 in five suits. Everyone starts with <b>4 lives</b> and two tokens, <em>M</em> Major and <em>m</em> Minor.</li>
-            <li>Each player gets 4 cards. Four more go face up in the pool. A fifth is turned face up as the <b>bests</b> card; its suit is bests for the round. The card stays out of play.</li>
+            <li>Each player gets 4 cards. Four more go face up in the pool.</li>
             <li>Your four cards make a <b>poker hand</b>. Rankings are below. 1 is low and straights don't wrap.</li>
             <li>On your turn, swap one of your cards for a pool card, or pass.</li>
             <li>Once everyone has had a turn, you may instead <b>call “Forte!”</b> and place one token face down. Your hand is locked.</li>
             <li>Every other player takes one last turn, then places a token face down.</li>
             <li>Reveal. <em>M</em> Major means you claim the best hand; <em>m</em> Minor means you claim the worst. Wrong claim: lose a life.</li>
-            <li>Same kind of hand? <b>Bests comes first</b>: the hand holding the highest bests card wins, before values are compared. A pair of 5s with a bests card beats a pair of 8s without one. Bests never beats a better kind of hand.</li>
-            <li>No bests card on either side? Higher values win. Still tied: every tied claim counts as correct.</li>
+            <li>Same kind of hand? Higher values win. A straight goes by its top card; otherwise compare the biggest group first, then the other cards from high to low. An exact tie counts as correct for everyone in it.</li>
             <li>At 0 lives you're out. Last player standing wins. If everyone left goes out on the same reveal, the game is a draw.</li>
           </ol>
           <div class="label" style="margin-top:14px">Hand rankings, best first</div>
@@ -280,12 +274,8 @@ function analyze(h){
   let tb=0;if(st)tb=rs[3];else g.forEach(([r,n])=>{for(let i=0;i<n;i++)tb=tb*11+r});
   return{cat,score:cat*1e5+tb,g,hi:rs[3]};
 }
-/* Bests before values: within the same kind of hand, compare bests cards (highest first), then values. */
-function trumpKey(h){const t=h.map(CARD).filter(c=>S&&c.s===S.trump).map(c=>c.r).sort((a,b)=>b-a);let k=0;for(let i=0;i<4;i++)k=k*11+(t[i]||0);return k}
-const value=h=>{const a=analyze(h);return (a.cat*15000+trumpKey(h))*1e5+(a.score-a.cat*1e5);};
-/* The hand's name plus its highest bests card, when it holds one: "High card 6 · with bests 6". */
-function bestsIn(h){if(!S||S.trump==null)return null;const t=h.map(CARD).filter(c=>c.s===S.trump).sort((a,b)=>b.r-a.r);return t[0]||null}
-function handLabel(h){const b=bestsIn(h);return handName(h)+(b?` · with bests ${b.r}`:'')}
+const value=h=>analyze(h).score;
+const handLabel=h=>handName(h);
 function handName(h){const a=analyze(h),g=a.g;
   switch(a.cat){
     case 7:return `Straight flush, ${a.hi} high`;
@@ -326,11 +316,11 @@ function startRound(){
   const deck=shuffle(ALL.map(c=>c.id));
   S.players.forEach(p=>{p.hand=[];p.known=[];p.token=null});
   active().forEach(i=>{S.players[i].hand=deck.splice(0,4)});
-  S.pool=deck.splice(0,4);S.trumpCard=deck.shift();S.trump=CARD(S.trumpCard).s;
+  S.pool=deck.splice(0,4);S.trump=null;S.trumpCard=null;
   S.phase='play';S.caller=null;S.queue=[];S.turnsTaken=0;S.reveal=null;S.awaitTokenFor=null;
   S.turn=nextActive(S.dealer);
-  log(`<b>Round ${S.round}.</b> ${S.players[S.dealer].name} deals. Bests is ${SUITS[S.trump].n} (${cname(S.trumpCard)}).`,true);
-  rec('');rec(`ROUND ${S.round}. ${S.dealer===0?'You deal':S.players[S.dealer].name+' deals'}. Bests: ${SUITS[S.trump].n} (${cname(S.trumpCard)}). Lives: ${active().map(i=>`${S.players[i].name} ${S.players[i].lives}`).join(', ')}.`);
+  log(`<b>Round ${S.round}.</b> ${S.players[S.dealer].name} deals.`,true);
+  rec('');rec(`ROUND ${S.round}. ${S.dealer===0?'You deal':S.players[S.dealer].name+' deals'}. Lives: ${active().map(i=>`${S.players[i].name} ${S.players[i].lives}`).join(', ')}.`);
   rec(`Pool: ${handStr(S.pool)}.`);if(!S.players[0].out)rec(yourHand());
   sel={h:null,p:null};render();schedule();
 }
@@ -399,7 +389,7 @@ function aimsHigh(j){return .5}
 // adv: assume each opponent uses its extra cards against you (higher when you'd claim Major, lower when Minor)
 function estimate(pi,hand,pool,N,reads=true,improve=true,adv=false){
   const me=value(hand);
-  const ex=new Set([...hand,...pool]);if(S.trumpCard!=null)ex.add(S.trumpCard);
+  const ex=new Set([...hand,...pool]);
   const others=active().filter(j=>j!==pi);
   const fixed=others.map(j=>reads?S.players[j].known.filter(id=>!ex.has(id)):[]);
   fixed.flat().forEach(id=>ex.add(id));
@@ -411,9 +401,8 @@ function estimate(pi,hand,pool,N,reads=true,improve=true,adv=false){
     const u=unseen;for(let i=0;i<need;i++){const j=i+(Math.random()*(u.length-i)|0);[u[i],u[j]]=[u[j],u[i]]}
     let k=0,mx=-Infinity,mn=Infinity;
     for(let o=0;o<fixed.length;o++){
-      const h=fixed[o].slice();while(h.length<4+ks[o])h.push(u[k++]);
-      let v;
       let vh,vl;
+      const h=fixed[o].slice();while(h.length<4+ks[o])h.push(u[k++]);
       if(h.length===4){vh=vl=value(h)}
       else if(adv){vh=-Infinity;vl=Infinity;
         for(const c of COMBOS[h.length]){const x=value([h[c[0]],h[c[1]],h[c[2]],h[c[3]]]);if(x>vh)vh=x;if(x<vl)vl=x}}
@@ -470,8 +459,7 @@ function schedule(){
 function cardHTML(id,{sm=false,pick=false,selected=false,data=''}={}){
   const c=CARD(id);
   const tag=pick?'button':'div';
-  const bm=S&&S.trump===c.s;
-  return `<${tag} class="card${sm?' sm':''}${pick?' pick':''}${selected?' sel':''}${bm?' bmark':''}" style="--c:${SUITS[c.s].c}" ${data} ${pick?`aria-label="${cname(id)}${bm?', bests':''}" aria-pressed="${selected}"`:''}>
+  return `<${tag} class="card${sm?' sm':''}${pick?' pick':''}${selected?' sel':''}" style="--c:${SUITS[c.s].c}" ${data} ${pick?`aria-label="${cname(id)}" aria-pressed="${selected}"`:''}>
     <span class="idx">${c.r}${svgOf(c.s)}</span>${sm?'':`<span class="idx b">${c.r}${svgOf(c.s)}</span>`}</${tag}>`;
 }
 const backHTML=()=>`<div class="card back sm" aria-label="face-down card"></div>`;
@@ -492,7 +480,6 @@ function render(){
   // pool
   const myTurn=S.turn===0&&!human.out&&(S.phase==='play'||S.phase==='final')&&S.awaitTokenFor===null;
   $('pool').innerHTML=S.pool.map((id,j)=>cardHTML(id,{pick:myTurn,selected:sel.p===j,data:`data-p="${j}"`})).join('');
-  $('trump').innerHTML=S.trumpCard!=null?`<span class="label">Bests</span>${cardHTML(S.trumpCard,{sm:true})}<span>${SUITS[S.trump].n} wins within each kind of hand. Bests cards have a gold ring.</span>`:'';
   // hand
   $('hand').innerHTML=human.out?'<span class="label">You are out. Watch the others finish.</span>':human.hand.map((id,i)=>cardHTML(id,{pick:myTurn,selected:sel.h===i,data:`data-h="${i}"`})).join('');
   $('myLives').innerHTML=livesHTML(human.lives);
@@ -541,7 +528,7 @@ function openRevealModal(){
       <span class="v">${r.name.split(' · ')[0]}${r.name.includes(' · ')?`<br><span style="font-family:var(--body);font-weight:600;font-size:12px;color:var(--brass)">${r.name.split(' · ')[1]}</span>`:''}</span>${tokHTML(r.tok,{cls:r.ok?'ok':'no'})}</div>`}).join('');
   const over=S.phase==='over';
   $('modal').innerHTML=`<h2>${over?(S.winner===null?'Everyone is out: the game is a draw':S.winner===0?'You win the game':`${S.players[S.winner].name} wins the game`):`Round ${S.round}: the reveal`}</h2>
-    <div class="summary">Best: <b>${R.mxName}</b> · Worst: <b>${R.mnName}</b> · Bests: <b>${S.trump!=null?SUITS[S.trump].n:'none'}</b>${R.spared?' · Everyone left would have gone out, so no one loses a life.':''}</div>
+    <div class="summary">Best: <b>${R.mxName}</b> · Worst: <b>${R.mnName}</b>${R.spared?' · Everyone left would have gone out, so no one loses a life.':''}</div>
     <div class="res">${rows}</div>
     <div class="actions"><button class="btn primary" id="nextBtn">${over?'Play again':'Next round'}</button><button class="btn" id="revRec">Game record</button></div>`;
   $('overlay').hidden=false;

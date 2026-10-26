@@ -1,4 +1,4 @@
-# Fortepianissimo — Rules (v2)
+# Fortepianissimo — Rules (v3)
 
 Loosely based on Blitz / 31.
 
@@ -8,7 +8,6 @@ Loosely based on Blitz / 31.
 
 ## Setup
 - Deal 4 cards to each player. Deal 4 cards face up in the center as the pool.
-- Turn a fifth card face up as the **bests** card. Its suit is bests for the round. The bests card itself stays out of play.
 
 ## Hands (4-card poker, best first)
 Ranked by how rare each hand is in this 50-card deck (out of 230,300 possible hands). 1 is low; straights don't wrap.
@@ -24,10 +23,9 @@ Ranked by how rare each hand is in this 50-card deck (out of 230,300 possible ha
 | Pair | 5-5-10-2 | 90,000 |
 | High card | 10-7-4-1 | 125,860 |
 
-### Comparing two hands of the same kind: bests before values
-1. **Bests first.** The hand holding the highest bests card wins (then the next bests card, and so on). How many bests cards you hold doesn't matter. A pair of 5s with a bests card beats a pair of 8s without one.
-2. **Then values.** If neither hand holds a bests card, higher values win: a straight goes by its top card; otherwise compare the biggest group first, then the other cards from high to low.
-3. **Bests never beats a better kind of hand.** Any two pair beats any pair, bests or not.
+### Comparing two hands of the same kind
+- Higher values win. A straight goes by its top card; otherwise compare the biggest group first (the three in three of a kind, the higher pair in two pair), then the other cards from high to low.
+- Suits never matter.
 
 ## Turn
 - Swap one of your cards for one pool card, or pass.
@@ -39,7 +37,7 @@ Ranked by how rare each hand is in this 50-card deck (out of 230,300 possible ha
 ## Reveal
 - **Major (M)** is correct if your hand is the highest.
 - **Minor (m)** is correct if your hand is the lowest.
-- If hands are still tied (no bests cards and the same values), every tied claim counts as correct. No one loses a life over a tie.
+- An exact tie (same kind of hand, same values) counts as correct for every tied claim. No one loses a life over a tie.
 - Wrong claim: lose a life. At 0 lives you're out.
 
 ## Winning
@@ -50,6 +48,6 @@ Ranked by how rare each hand is in this 50-card deck (out of 230,300 possible ha
 - Calling replaces your swap (Blitz-style knock). Alternative: swap, then call.
 - Passing is allowed: a turn is a swap, a pass, or a call.
 - No calling until everyone has had at least one turn.
-- Bests before values: within the same kind of hand, bests cards are compared before values. In 1,000 simulated bot games this changed who had the best or worst hand in about 1 in 20 reveals.
-- True ties (no bests cards, same values) count as correct for Major and Minor.
+- The bests suit was tried (first as a tie-breaker, then "bests before values") and removed in v3.
+- Exact ties count as correct for Major and Minor.
 - Straight ranks above three of a kind and two pair because it's slightly rarer with 5 suits (4,340 vs 4,500). Three of a kind and two pair are equally rare; three of a kind is ranked higher by convention.
