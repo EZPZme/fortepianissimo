@@ -396,7 +396,8 @@ const COMBOS={5:combos(5),6:combos(6)};
 function lookahead(j){if(S.phase!=='final')return 2;return (S.turn===j||S.queue.includes(j))?1:0}
 // styles are hidden from the player, so bots don't peek at them either: every opponent is equally likely to aim high or low
 function aimsHigh(j){return .5}
-function estimate(pi,hand,pool,N,reads=true,improve=true){
+// adv: assume each opponent uses its extra cards against you (higher when you'd claim Major, lower when Minor)
+function estimate(pi,hand,pool,N,reads=true,improve=true,adv=false){
   const me=value(hand);
   const ex=new Set([...hand,...pool]);if(S.trumpCard!=null)ex.add(S.trumpCard);
   const others=active().filter(j=>j!==pi);
@@ -412,10 +413,14 @@ function estimate(pi,hand,pool,N,reads=true,improve=true){
     for(let o=0;o<fixed.length;o++){
       const h=fixed[o].slice();while(h.length<4+ks[o])h.push(u[k++]);
       let v;
-      if(h.length===4)v=value(h);
-      else{const up=Math.random()<hi[o];v=up?-Infinity:Infinity;
-        for(const c of COMBOS[h.length]){const x=value([h[c[0]],h[c[1]],h[c[2]],h[c[3]]]);if(up?x>v:x<v)v=x}}
-      if(v>mx)mx=v;if(v<mn)mn=v;
+      let vh,vl;
+      if(h.length===4){vh=vl=value(h)}
+      else if(adv){vh=-Infinity;vl=Infinity;
+        for(const c of COMBOS[h.length]){const x=value([h[c[0]],h[c[1]],h[c[2]],h[c[3]]]);if(x>vh)vh=x;if(x<vl)vl=x}}
+      else{const up=Math.random()<hi[o];let v=up?-Infinity:Infinity;
+        for(const c of COMBOS[h.length]){const x=value([h[c[0]],h[c[1]],h[c[2]],h[c[3]]]);if(up?x>v:x<v)v=x}
+        vh=vl=v}
+      if(vh>mx)mx=vh;if(vl<mn)mn=vl;
     }
     if(me>=mx)b++;if(me<=mn)w++;
   }
@@ -436,7 +441,13 @@ function aiTurn(pi){
   // the longer a round runs past this player's patience, the less sure it needs to be to call
   const rot=S.turnsTaken/active().length;
   const thr=st.call+Math.random()*st.jit-0.04*Math.max(0,rot-st.patience);
-  if(canCall()&&rot>=st.patience&&curScore>=thr){doCall(pi,aiChooseToken(pi));return}
+  // one-on-one, calling hands the other player a free last turn to beat you, so judge the call against that
+  const hu=active().length===2&&st.improve!==false&&st.hu!==false;
+  const callE=hu?estimate(pi,p.hand,S.pool,N*2,st.reads,true,true):null;
+  const callScore=hu?pull(callE,st):curScore;
+  if(canCall()&&rot>=st.patience&&callScore>=thr){
+    let tok;if(hu){const [a,c]=wts(st);tok=callE.b*a>=callE.w*c?'f':'pp'}else tok=aiChooseToken(pi);
+    doCall(pi,tok);return}
   const options=[];
   for(let i=0;i<4;i++)for(let j=0;j<S.pool.length;j++)options.push([i,j]);
   if(st.wild&&Math.random()<st.wild){const [i,j]=options[Math.random()*options.length|0];doSwap(pi,i,j);return}
