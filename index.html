@@ -4,7 +4,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,500;0,6..96,700;1,6..96,700;1,6..96,900&family=Libre+Franklin:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,500;0,6..96,700;1,6..96,700;1,6..96,900&family=Libre+Franklin:wght@400;500;600&family=Roboto+Slab:wght@700&display=swap">
 <style>
 /* Layout: a lacquered piano lid as the table — opponents across the top, the pool on the music desk, your hand at the keyboard edge. Deliberately single-theme (dark lacquer). */
 :root{
@@ -25,6 +25,7 @@
   --s2:#9a6a12; /* Sharp */
   --s3:#2a4a8c; /* Flat */
   --s4:#5d3a7c; /* Eighth */
+  --num:"Roboto Slab","Rockwell","Courier New",serif;
   --display:"Bodoni Moda","Didot","Bodoni 72",Georgia,serif;
   --body:"Libre Franklin","Helvetica Neue",Arial,sans-serif;
   color-scheme:dark;
@@ -72,7 +73,8 @@ select{background:var(--lacquer-2);color:var(--text);border:1px solid var(--lacq
 .card{--w:76px;width:var(--w);height:calc(var(--w)*1.42);border-radius:8px;background:linear-gradient(170deg,var(--ivory),var(--ivory-2));color:var(--c,var(--ink));position:relative;flex:none;
   box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 6px 14px rgba(0,0,0,.45);display:grid;place-items:center;border:none;padding:0;cursor:default;transition:transform .15s,box-shadow .15s}
 /* Corner index: rank with its suit symbol beside it. The card's center is left open for now. */
-.card .idx{position:absolute;top:6px;left:6px;display:flex;align-items:center;gap:1px;font-family:var(--display);font-weight:700;font-size:calc(var(--w)*.28);line-height:1}
+/* card numbers use a slab face whose 1 and 4 can't be confused */
+.card .idx{position:absolute;top:6px;left:6px;display:flex;align-items:center;gap:1px;font-family:var(--num);font-weight:700;font-size:calc(var(--w)*.26);line-height:1}
 .card .idx.b{top:auto;left:auto;bottom:6px;right:6px;transform:rotate(180deg)}
 /* Suit symbols: drawn from Noto Music outlines, sized by ink height so they read alike. The treble clef is slender, so it gets a little extra height. */
 .sym{display:block;overflow:visible}
