@@ -378,7 +378,7 @@ function estimate(pi,hand,pool,N,reads=true){
   let b=0,w=0;
   for(let n=0;n<N;n++){
     const u=unseen;for(let i=0;i<need;i++){const j=i+(Math.random()*(u.length-i)|0);[u[i],u[j]]=[u[j],u[i]]}
-    let k=0,mx=-1,mn=99;
+    let k=0,mx=-Infinity,mn=Infinity;
     for(const f of fixed){const h=f.slice();while(h.length<4)h.push(u[k++]);const v=value(h);if(v>mx)mx=v;if(v<mn)mn=v}
     if(me>=mx)b++;if(me<=mn)w++;
   }
