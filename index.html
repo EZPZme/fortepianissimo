@@ -168,6 +168,7 @@ details[open] summary::after{content:" –"}
     <div class="controls">
       <label for="oppCount">Opponents</label>
       <select id="oppCount"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select>
+      <button class="btn" id="recBtn">Game record</button>
       <button class="btn" id="newGame">New game</button>
     </div>
   </header>
@@ -299,12 +300,19 @@ function newGame(nOpp){
   const styles=shuffle(STYLES.slice());
   for(let i=0;i<nOpp;i++)players.push({name:NAMES[i],human:false,style:styles[i]});
   players.forEach(p=>{p.lives=4;p.out=false;p.hand=[];p.known=[];p.token=null});
-  S={players,pool:[],dealer:Math.random()*players.length|0,turn:0,phase:'play',caller:null,queue:[],turnsTaken:0,round:0,log:[],winner:null,awaitTokenFor:null,reveal:null};
+  S={players,pool:[],dealer:Math.random()*players.length|0,turn:0,phase:'play',caller:null,queue:[],turnsTaken:0,round:0,log:[],winner:null,awaitTokenFor:null,reveal:null,record:[]};
+  rec(`Fortepianissimo game record (${new Date().toLocaleString()})`);
+  rec(`Players: You, ${players.slice(1).map(p=>`${p.name} (${p.style.tag})`).join(', ')}. Everyone starts with 4 lives.`);
   startRound();
 }
 const active=()=>S.players.map((p,i)=>i).filter(i=>!S.players[i].out);
 function nextActive(i){const n=S.players.length;for(let k=1;k<=n;k++){const j=(i+k)%n;if(!S.players[j].out)return j}return i}
 function log(html,hl){S.log.unshift({html,hl});if(S.log.length>60)S.log.pop()}
+/* Full game record for review: every action, your hand after each of your turns, and every reveal. */
+function rec(t){(S.record||(S.record=[])).push(t)}
+const handStr=h=>h.map(cname).join(', ');
+const tokName=t=>t==='f'?'Major':'Minor';
+const yourHand=()=>`Your hand: ${handStr(S.players[0].hand)} (${handName(S.players[0].hand)}).`;
 
 function startRound(){
   S.round++;S.dealer=nextActive(S.dealer);
@@ -315,6 +323,8 @@ function startRound(){
   S.phase='play';S.caller=null;S.queue=[];S.turnsTaken=0;S.reveal=null;S.awaitTokenFor=null;
   S.turn=nextActive(S.dealer);
   log(`<b>Round ${S.round}.</b> ${S.players[S.dealer].name} deals. Bests is ${SUITS[S.trump].n} (${cname(S.trumpCard)}).`,true);
+  rec('');rec(`ROUND ${S.round}. ${S.dealer===0?'You deal':S.players[S.dealer].name+' deals'}. Bests: ${SUITS[S.trump].n} (${cname(S.trumpCard)}). Lives: ${active().map(i=>`${S.players[i].name} ${S.players[i].lives}`).join(', ')}.`);
+  rec(`Pool: ${handStr(S.pool)}.`);if(!S.players[0].out)rec(yourHand());
   sel={h:null,p:null};render();schedule();
 }
 function canCall(){return S.phase==='play'&&S.turnsTaken>=active().length}
@@ -324,12 +334,14 @@ function doSwap(pi,hi,pj){
   p.hand[hi]=inn;S.pool[pj]=out;
   p.known=p.known.filter(id=>id!==out);p.known.push(inn);
   log(`<b>${p.name}</b> took ${cname(inn)}, left ${cname(out)}.`);
+  rec(`${p.name} took ${cname(inn)}, left ${cname(out)}.${p.human?' '+yourHand():''}`);
   endTurn(pi);
 }
-function doPass(pi){log(`<b>${S.players[pi].name}</b> passes.`);endTurn(pi)}
+function doPass(pi){log(`<b>${S.players[pi].name}</b> passes.`);rec(S.players[pi].human?`You pass. ${yourHand()}`:`${S.players[pi].name} passes.`);endTurn(pi)}
 function doCall(pi,tok){
   const p=S.players[pi];p.token=tok;S.caller=pi;S.phase='final';
   log(`<b>${p.name}</b> calls “Forte!” and places a token face down.`,true);
+  rec(p.human?`You call "Forte!" and place ${tokName(tok)}. ${yourHand()}`:`${p.name} calls "Forte!" and places a token face down.`);
   S.queue=[];let j=nextActive(pi);while(j!==pi){S.queue.push(j);j=nextActive(j)}
   advanceFinal();
 }
@@ -338,13 +350,13 @@ function endTurn(pi){
   if(S.phase==='final'){
     const p=S.players[pi];
     if(p.human){S.awaitTokenFor=pi;render();openTokenModal(false);return}
-    p.token=aiChooseToken(pi);log(`<b>${p.name}</b> places a token face down.`);
+    p.token=aiChooseToken(pi);log(`<b>${p.name}</b> places a token face down.`);rec(`${p.name} places a token face down.`);
     advanceFinal();
   }else{S.turn=nextActive(pi);sel={h:null,p:null};render();schedule()}
 }
 function placeToken(pi,tok){S.players[pi].token=tok;S.awaitTokenFor=null;closeModal();
   if(S.caller===null){doCall(pi,tok);return}
-  log(`<b>You</b> place a token face down.`);advanceFinal()}
+  log(`<b>You</b> place a token face down.`);rec(`You place ${tokName(tok)}.`);advanceFinal()}
 function advanceFinal(){
   sel={h:null,p:null};
   if(S.queue.length===0){reveal();return}
@@ -361,8 +373,10 @@ function reveal(){
   const spared=false;
   losers.forEach(r=>{const p=S.players[r.i];p.lives--;if(p.lives<=0){p.out=true;r.out=true}});
   rows.forEach(r=>log(`<b>${S.players[r.i].name}</b> ${r.tok==='f'?'Major':'Minor'} with ${r.name.toLowerCase()}: ${r.ok?'held':spared?'spared':'lost a life'}${r.out?' and is out':''}.`,r.out));
+  rec(`REVEAL. Best hand: ${rows.find(r=>r.v===mx).name}. Worst hand: ${rows.find(r=>r.v===mn).name}.`);
+  rows.forEach(r=>{const p=S.players[r.i];rec(`  ${p.name}: ${handStr(p.hand)} = ${r.name}. Claimed ${tokName(r.tok)}: ${r.ok?'right':'wrong, loses a life'}${r.out?' and is out':` (${p.lives} ${p.lives===1?'life':'lives'} left)`}.`)});
   S.phase='reveal';S.reveal={rows,mx,mn,spared,mxName:rows.find(r=>r.v===mx).name,mnName:rows.find(r=>r.v===mn).name};
-  const left=active();if(left.length<=1){S.winner=left.length?left[0]:null;S.phase='over';if(!left.length)log('<b>Everyone is out.</b> The game is a draw.',true)}
+  const left=active();if(left.length<=1){S.winner=left.length?left[0]:null;S.phase='over';if(!left.length)log('<b>Everyone is out.</b> The game is a draw.',true);rec('');rec(S.winner==null?'GAME OVER: everyone went out together. Draw.':`GAME OVER: ${S.players[S.winner].name} wins after ${S.round} rounds.`)}
   render();openRevealModal();
 }
 
@@ -493,9 +507,10 @@ function openRevealModal(){
   $('modal').innerHTML=`<h2>${over?(S.winner===null?'Everyone is out: the game is a draw':S.winner===0?'You win the game':`${S.players[S.winner].name} wins the game`):`Round ${S.round}: the reveal`}</h2>
     <div class="summary">Best: <b>${R.mxName}</b> · Worst: <b>${R.mnName}</b> · Bests: <b>${S.trump!=null?SUITS[S.trump].n:'none'}</b>${R.spared?' · Everyone left would have gone out, so no one loses a life.':''}</div>
     <div class="res">${rows}</div>
-    <div class="actions"><button class="btn primary" id="nextBtn">${over?'Play again':'Next round'}</button></div>`;
+    <div class="actions"><button class="btn primary" id="nextBtn">${over?'Play again':'Next round'}</button><button class="btn" id="revRec">Game record</button></div>`;
   $('overlay').hidden=false;
   $('nextBtn').onclick=()=>{closeModal();over?newGame(+$('oppCount').value):startRound()};
+  $('revRec').onclick=()=>$('recBtn').onclick();
   $('nextBtn').focus();
 }
 function closeModal(){$('overlay').hidden=true}
@@ -510,6 +525,17 @@ $('swapBtn').onclick=()=>{if(sel.h!==null&&sel.p!==null)doSwap(0,sel.h,sel.p)};
 $('passBtn').onclick=()=>doPass(0);
 $('callBtn').onclick=()=>{S.awaitTokenFor=0;openTokenModal(true)};
 $('newGame').onclick=()=>{closeModal();newGame(+$('oppCount').value)};
+$('recBtn').onclick=()=>{
+  const txt=(S.record||[]).join('\n');
+  $('modal').innerHTML=`<h2>Game record</h2><p>Copy this and paste it into your chat with Claude to go over your game.</p>
+    <label class="label" for="recTxt">Record so far</label>
+    <textarea id="recTxt" readonly style="width:100%;height:320px;box-sizing:border-box;background:var(--lacquer);color:var(--text);border:1px solid var(--lacquer-3);border-radius:8px;padding:10px;font:12px/1.5 ui-monospace,Consolas,monospace;resize:vertical"></textarea>
+    <div class="actions"><button class="btn primary" id="recCopy">Copy</button><button class="btn" id="recClose">Close</button></div>`;
+  $('recTxt').value=txt;$('overlay').hidden=false;
+  $('recCopy').onclick=()=>{const ta=$('recTxt');const done=()=>{$('recCopy').textContent='Copied'};
+    try{navigator.clipboard.writeText(txt).then(done,()=>{ta.focus();ta.select();$('recCopy').textContent='Press Ctrl+C to copy'})}catch(e){ta.focus();ta.select();$('recCopy').textContent='Press Ctrl+C to copy'}};
+  $('recClose').onclick=()=>{closeModal();if(S.phase==='reveal'||S.phase==='over')openRevealModal();else if(S.awaitTokenFor===0)openTokenModal(S.caller===null)};
+};
 $('suitkey').innerHTML=SUITS.map((s,i)=>`<div><span style="color:${s.c}">${svgOf(i)}</span>${s.n}</div>`).join('');
 
 /* ---------- boot / live update ---------- */
