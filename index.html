@@ -82,6 +82,10 @@ select{background:var(--lacquer-2);color:var(--text);border:1px solid var(--lacq
 .card.pick:hover{transform:translateY(-4px)}
 .card.sel{transform:translateY(-10px);box-shadow:0 0 0 3px var(--brass),0 12px 22px rgba(0,0,0,.55)}
 .card.sm{--w:30px;border-radius:4px;box-shadow:0 2px 5px rgba(0,0,0,.5)}
+/* bests cards: gold ring */
+.card.bmark{box-shadow:0 0 0 2px var(--brass),0 6px 14px rgba(0,0,0,.45)}
+.card.sm.bmark{box-shadow:0 0 0 2px var(--brass),0 2px 5px rgba(0,0,0,.5)}
+.card.bmark.sel{box-shadow:0 0 0 3px #f0d68a,0 12px 22px rgba(0,0,0,.55)}
 .card.sm .idx{font-size:12px;top:3px;left:3px;gap:0}
 .card.sm .idx.b{display:none}
 .back{background:repeating-linear-gradient(135deg,#3a2a1a 0 4px,#2b1f14 4px 8px);box-shadow:0 0 0 1px var(--brass-dim) inset,0 2px 5px rgba(0,0,0,.5)}
@@ -279,6 +283,9 @@ function analyze(h){
 /* Bests before values: within the same kind of hand, compare bests cards (highest first), then values. */
 function trumpKey(h){const t=h.map(CARD).filter(c=>S&&c.s===S.trump).map(c=>c.r).sort((a,b)=>b-a);let k=0;for(let i=0;i<4;i++)k=k*11+(t[i]||0);return k}
 const value=h=>{const a=analyze(h);return (a.cat*15000+trumpKey(h))*1e5+(a.score-a.cat*1e5);};
+/* The hand's name plus its highest bests card, when it holds one: "High card 6 · with bests 6". */
+function bestsIn(h){if(!S||S.trump==null)return null;const t=h.map(CARD).filter(c=>c.s===S.trump).sort((a,b)=>b.r-a.r);return t[0]||null}
+function handLabel(h){const b=bestsIn(h);return handName(h)+(b?` · with bests ${b.r}`:'')}
 function handName(h){const a=analyze(h),g=a.g;
   switch(a.cat){
     case 7:return `Straight flush, ${a.hi} high`;
@@ -312,7 +319,7 @@ function log(html,hl){S.log.unshift({html,hl});if(S.log.length>60)S.log.pop()}
 function rec(t){(S.record||(S.record=[])).push(t)}
 const handStr=h=>h.map(cname).join(', ');
 const tokName=t=>t==='f'?'Major':'Minor';
-const yourHand=()=>`Your hand: ${handStr(S.players[0].hand)} (${handName(S.players[0].hand)}).`;
+const yourHand=()=>`Your hand: ${handStr(S.players[0].hand)} (${handLabel(S.players[0].hand)}).`;
 
 function startRound(){
   S.round++;S.dealer=nextActive(S.dealer);
@@ -366,7 +373,7 @@ function advanceFinal(){
 function reveal(){
   const ids=active();const vals=ids.map(i=>value(S.players[i].hand));
   const mx=Math.max(...vals),mn=Math.min(...vals);
-  const rows=ids.map((i,k)=>{const p=S.players[i];const v=vals[k];const ok=(p.token==='f'&&v===mx)||(p.token==='pp'&&v===mn);return{i,v,ok,tok:p.token,name:handName(p.hand)}});
+  const rows=ids.map((i,k)=>{const p=S.players[i];const v=vals[k];const ok=(p.token==='f'&&v===mx)||(p.token==='pp'&&v===mn);return{i,v,ok,tok:p.token,name:handLabel(p.hand)}});
   const losers=rows.filter(r=>!r.ok);
   const wouldOut=losers.filter(r=>S.players[r.i].lives===1).length;
   const survivorsLeft=ids.length-wouldOut;
@@ -434,7 +441,8 @@ function schedule(){
 function cardHTML(id,{sm=false,pick=false,selected=false,data=''}={}){
   const c=CARD(id);
   const tag=pick?'button':'div';
-  return `<${tag} class="card${sm?' sm':''}${pick?' pick':''}${selected?' sel':''}" style="--c:${SUITS[c.s].c}" ${data} ${pick?`aria-label="${cname(id)}" aria-pressed="${selected}"`:''}>
+  const bm=S&&S.trump===c.s;
+  return `<${tag} class="card${sm?' sm':''}${pick?' pick':''}${selected?' sel':''}${bm?' bmark':''}" style="--c:${SUITS[c.s].c}" ${data} ${pick?`aria-label="${cname(id)}${bm?', bests':''}" aria-pressed="${selected}"`:''}>
     <span class="idx">${c.r}${svgOf(c.s)}</span>${sm?'':`<span class="idx b">${c.r}${svgOf(c.s)}</span>`}</${tag}>`;
 }
 const backHTML=()=>`<div class="card back sm" aria-label="face-down card"></div>`;
@@ -456,11 +464,11 @@ function render(){
   // pool
   const myTurn=S.turn===0&&!human.out&&(S.phase==='play'||S.phase==='final')&&S.awaitTokenFor===null;
   $('pool').innerHTML=S.pool.map((id,j)=>cardHTML(id,{pick:myTurn,selected:sel.p===j,data:`data-p="${j}"`})).join('');
-  $('trump').innerHTML=S.trumpCard!=null?`<span class="label">Bests</span>${cardHTML(S.trumpCard,{sm:true})}<span>${SUITS[S.trump].n} wins within each kind of hand</span>`:'';
+  $('trump').innerHTML=S.trumpCard!=null?`<span class="label">Bests</span>${cardHTML(S.trumpCard,{sm:true})}<span>${SUITS[S.trump].n} wins within each kind of hand. Bests cards have a gold ring.</span>`:'';
   // hand
   $('hand').innerHTML=human.out?'<span class="label">You are out. Watch the others finish.</span>':human.hand.map((id,i)=>cardHTML(id,{pick:myTurn,selected:sel.h===i,data:`data-h="${i}"`})).join('');
   $('myLives').innerHTML=livesHTML(human.lives);
-  if(!human.out){$('myVal').innerHTML=`Your hand <strong>${handName(human.hand)}</strong>`}else $('myVal').innerHTML='';
+  if(!human.out){$('myVal').innerHTML=`Your hand <strong>${handLabel(human.hand)}</strong>`}else $('myVal').innerHTML='';
   $('mySlot').innerHTML=human.token&&S.phase!=='reveal'&&S.phase!=='over'?tokHTML(human.token):'';
   $('you').classList.toggle('turn',myTurn);
   $('swapBtn').disabled=!(myTurn&&sel.h!==null&&sel.p!==null);
@@ -482,7 +490,7 @@ function render(){
 
 /* ---------- modals ---------- */
 function openTokenModal(isCall){
-  const v=handName(S.players[0].hand);
+  const v=handLabel(S.players[0].hand);
   $('modal').innerHTML=`<h2>${isCall?'Call “Forte!”':'Place your token'}</h2>
     <p>Your hand: <b style="color:var(--text)">${v}</b>. Pick a claim. It stays face down until the reveal.</p>
     <div class="tokchoice">
@@ -502,7 +510,7 @@ function openRevealModal(){
     return `<div class="resrow"><div class="who"><span class="name">${p.name}${S.caller===r.i?' <span class="label" style="font-size:9px">caller</span>':''}</span>
       <div class="mini-row">${p.hand.map(id=>cardHTML(id,{sm:true})).join('')}</div>
       <span class="verdict ${r.ok?'ok':'no'}">${r.ok?'Claim held':R.spared?'Wrong claim, spared':r.out?'Wrong claim: out of the game':`Wrong claim: ${p.lives} ${p.lives===1?'life':'lives'} left`}</span></div>
-      <span class="v">${r.name}</span>${tokHTML(r.tok,{cls:r.ok?'ok':'no'})}</div>`}).join('');
+      <span class="v">${r.name.split(' · ')[0]}${r.name.includes(' · ')?`<br><span style="font-family:var(--body);font-weight:600;font-size:12px;color:var(--brass)">${r.name.split(' · ')[1]}</span>`:''}</span>${tokHTML(r.tok,{cls:r.ok?'ok':'no'})}</div>`}).join('');
   const over=S.phase==='over';
   $('modal').innerHTML=`<h2>${over?(S.winner===null?'Everyone is out: the game is a draw':S.winner===0?'You win the game':`${S.players[S.winner].name} wins the game`):`Round ${S.round}: the reveal`}</h2>
     <div class="summary">Best: <b>${R.mxName}</b> · Worst: <b>${R.mnName}</b> · Bests: <b>${S.trump!=null?SUITS[S.trump].n:'none'}</b>${R.spared?' · Everyone left would have gone out, so no one loses a life.':''}</div>
